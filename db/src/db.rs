@@ -82,6 +82,28 @@ impl AwsPeerDB {
             Err(err) => Err(err.into()),
         }
     }
+
+    pub async fn all_nonexistent_isp_peers(
+        &self,
+        page_size: Option<i32>,
+    ) -> Result<Vec<PeerData>, ScanTableError> {
+        let page_size = page_size.unwrap_or(1000);
+        let results: Result<Vec<_>, _> = self
+            .client
+            .scan()
+            .table_name("eth-peer-data")
+            .filter_expression("attribute_not_exists(isp)")
+            .limit(page_size)
+            .into_paginator()
+            .items()
+            .send()
+            .collect()
+            .await;
+        match results {
+            Ok(peers) => peers.iter().map(|peer| Ok(peer.into())).collect(),
+            Err(err) => Err(err.into()),
+        }
+    }
 }
 
 #[async_trait]
